@@ -1,17 +1,99 @@
-const path = require('path');
-const { getJsonFromFile } = require('../helpers/files');
+const Card = require('../models/card');
+const { createNotFoundError } = require('../canstans/constants');
 
-const cardsFilePath = path.join(__dirname, '..', 'data', 'cards.json');
+const getAllCards = (req, res) => {
+  Card.find({})
+    .orFail(createNotFoundError)
+    .then((cardsData) => {
+      console.log(cardsData);
+      res.status(200).send(cardsData);
+    })
 
-const getAllCards = async (req, res) => {
-  try {
-    const cards = await getJsonFromFile(cardsFilePath);
-
-    res.send(cards);
-  } catch (err) {
-    console.log('Error occurred', err);
-    res.status(500).send({ message: 'An error has occurred on the server' });
-  }
+    .catch((err) => {
+      if (err.name === 'Not Found') {
+        res.status(404).send({ message: `${err.message}` });
+        return;
+      }
+      res.status(500).send({ message: `${err.message}` });
+    });
 };
 
-module.exports = { getAllCards };
+const createCard = (req, res) => {
+  const { name, link, owner = req.user._id } = req.body;
+  Card.create({ name, link, owner })
+
+    .then(() => {
+      res.status(200).send('Card created successfully');
+    })
+
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        res.status(400).send({ messege: `${err.message}` });
+        return;
+      }
+      res.status(500).send({ messege: `${err.message}` });
+    });
+};
+
+const deleteCard = (req, res) => {
+  const { cardId } = req.params;
+  Card.deleteOne({ _id: cardId })
+    .orFail(createNotFoundError)
+    .then(() => {
+      res.status(200).send('card has been deleted successfully');
+    })
+
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        res.status(400).send({ message: `${err.message}` });
+        return;
+      }
+      if (err.name === 'Not Found') {
+        res.status(404).send({ message: `${err.message}` });
+      }
+      res.status(500).send({ message: `${err.message}` });
+    });
+};
+
+const dislikeCard = (req, res) => {
+  Card.findByIdAndUpdate(
+    req.params.cardId,
+    { $pull: { likes: req.user._id } },
+    { new: true },
+  )
+    .orFail(createNotFoundError)
+
+    .then((card) => {
+      res.status(200).send(card);
+    })
+
+    .catch((err) => {
+      console.log('Error occurred', err);
+      res.status(500).send('Somthing went wrong');
+    });
+};
+
+const likeCard = (req, res) => {
+  Card.findByIdAndUpdate(
+    req.params.cardId,
+    { $addToSet: { likes: req.user._id } },
+    { new: true },
+  )
+    .orFail(createNotFoundError)
+    .then((card) => {
+      res.status(200).send(card);
+    })
+
+    .catch((err) => {
+      console.log('Error occurred', err);
+      res.status(500).send('Somthing went wrong');
+    });
+};
+
+module.exports = {
+  getAllCards,
+  createCard,
+  deleteCard,
+  dislikeCard,
+  likeCard,
+};
