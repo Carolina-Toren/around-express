@@ -5,7 +5,6 @@ const getAllCards = (req, res) => {
   Card.find({})
     .orFail(createNotFoundError)
     .then((cardsData) => {
-      console.log(cardsData);
       res.status(200).send(cardsData);
     })
 
@@ -68,8 +67,13 @@ const dislikeCard = (req, res) => {
     })
 
     .catch((err) => {
-      console.log('Error occurred', err);
-      res.status(500).send('Somthing went wrong');
+      if (err.name === 'CastError') {
+        res.status(400).send({ message: `${err.message}` });
+      } if (err.name === 'DocumentNotFoundError') {
+        res.status(404).send({ message: `${err.message}` });
+      } else {
+        res.status(500).send({ message: `${err.message}` });
+      }
     });
 };
 
@@ -85,8 +89,13 @@ const likeCard = (req, res) => {
     })
 
     .catch((err) => {
-      console.log('Error occurred', err);
-      res.status(500).send('Somthing went wrong');
+      if (err.name === 'CastError') {
+        res.status(400).send({ message: `${err.message}` });
+      } if (err.name === 'DocumentNotFoundError') {
+        res.status(404).send({ message: `${err.message}` });
+      } else {
+        res.status(500).send({ message: `${err.message}` });
+      }
     });
 };
 
